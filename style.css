@@ -20,6 +20,27 @@ body {
   }
 
     .zone-1, .zone-2, .zone-3, .zone-4, .zone-5, .zone-6 {
-      border: 1px solid black;
-    }
+      border: 2px solid black;
+  }
+ 
+  .cell {
+    width: 40px;
+    height: 40px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
   
+  .totem {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+  }
+  
+  .red { background-color: crimson; }
+  .blue { background-color: royalblue; }
+  .green { background-color: seagreen; }
+   
