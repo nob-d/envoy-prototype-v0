@@ -86,3 +86,13 @@ body {
 .highlight-green {
   border: 2px solid seagreen !important;
 }
+
+/* Controlled zone borders */
+.zone-red { outline: 2px solid crimson; }
+.zone-blue { outline: 2px solid royalblue; }
+.zone-green { outline: 2px solid seagreen; }
+
+/* Contested zones (overlapping inner border) */
+.zone-contested-red { box-shadow: inset 0 0 0 2px crimson; }
+.zone-contested-blue { box-shadow: inset 0 0 0 2px royalblue; }
+.zone-contested-green { box-shadow: inset 0 0 0 2px seagreen; }

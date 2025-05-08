@@ -235,6 +235,7 @@ function placeTotem(cell, row, col) {
     playerState[`player${playerState.currentPlayer}Color`] = chosen;
     playerColor = chosen;
     updateStatus();
+    updateZoneControlVisuals();
   }
 
   // Place the totem
@@ -315,7 +316,8 @@ function summonEnvoy(envoyData, row, col) {
   cell.classList.add('occupied');
   cell.removeEventListener('click', cell.clickHandler);
 
-  cellData.push({
+  // Create the envoy object and include row/col directly
+  const newEnvoy = {
     row,
     col,
     zone: getZone(row, col),
@@ -324,42 +326,44 @@ function summonEnvoy(envoyData, row, col) {
     type: envoyData.role,
     rarity: envoyData.rarity,
     movement: envoyData.movement,
-    name: envoyData.name // ✅ IMPORTANT FOR COUNTING
-  });
+    name: envoyData.name
+  };
+
+  cellData.push(newEnvoy); // Store it in cellData
 
   endTurn();
 }
 
-function highlightOptions(envoy) {
-  const pattern = envoy.movement;
-  const colorClass = `highlight-${envoy.color}`;
+function updateZoneControlVisuals() {
+  const zones = [1, 2, 3, 4, 5, 6];
+  zones.forEach(zone => {
+    const zoneCells = document.querySelectorAll(`.cell[data-zone='${zone}']`);
+    const playersWithTotem = [];
 
-  for (let [dx, dy] of pattern) {
-    const r = envoy.row + dy;
-    const c = envoy.col + dx;
-    if (r >= 0 && r < 12 && c >= 0 && c < 8) {
-      const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
-      const target = cellData.find(cd => cd.row === r && cd.col === c);
-
-      // Attack targets
-      if (target && target.contents === "envoy" && target.color !== envoy.color) {
-        if (envoy.type === "artillery" || envoy.type === "ranger") {
-          cell.classList.add("attack-option", colorClass);
-          highlightedCells.push(cell);
-        }
-        if (envoy.type === "infantry") {
-          cell.classList.add("move-option", colorClass);
-          highlightedCells.push(cell);
-        }
-      }
-      // Move targets
-      if ((!target || !target.contents) && envoy.type !== "artillery") {
-        cell.classList.add("move-option", colorClass);
-        highlightedCells.push(cell);
-      }
+    for (let player = 1; player <= 2; player++) {
+      const color = playerState[`player${player}Color`];
+      const hasTotem = cellData.some(c => c.zone == zone && c.contents === "totem" && c.color === color);
+      if (hasTotem) playersWithTotem.push(color);
     }
-  }
+
+    // Remove old zone classes
+    zoneCells.forEach(cell => {
+      cell.classList.remove("zone-red", "zone-blue", "zone-green",
+                            "zone-contested-red", "zone-contested-blue", "zone-contested-green");
+    });
+
+    // Apply new styles
+    if (playersWithTotem.length === 1) {
+      zoneCells.forEach(cell => cell.classList.add(`zone-${playersWithTotem[0]}`));
+    } else if (playersWithTotem.length === 2) {
+      zoneCells.forEach(cell => {
+        cell.classList.add(`zone-contested-${playersWithTotem[0]}`);
+        cell.classList.add(`zone-contested-${playersWithTotem[1]}`);
+      });
+    }
+  });
 }
+
 
 function buildBoard() {
   for (let row = 0; row < 12; row++) {
@@ -382,21 +386,54 @@ function buildBoard() {
 
         // Click a move or attack target
         if (selectedEnvoy) {
-          if (cell.classList.contains('move-option')) {
-            moveEnvoyTo(selectedEnvoy, row, col);
-            endTurn();
-          } else if (cell.classList.contains('attack-option')) {
-            destroyAt(row, col);
-            if (selectedEnvoy.type !== "artillery") {
-              moveEnvoyTo(selectedEnvoy, row, col); // Infantry must move; Ranger can
+          const target = cellData.find(c => c.row === row && c.col === col);
+          const zone = Number(cell.dataset.zone);
+          const playerColor = selectedEnvoy.color;
+          const isEnemy = target && target.color !== playerColor;
+          const totemInZone = cellData.some(c => c.contents === "totem" && c.zone === zone && c.color === playerColor);
+        
+          // Infantry
+          if (selectedEnvoy.type === "infantry") {
+            if (!target) {
+              moveEnvoyTo(selectedEnvoy, row, col);
+            } else if (isEnemy && target.type !== "artillery") {
+              destroyAt(row, col);
+              moveEnvoyTo(selectedEnvoy, row, col);
+            } else {
+              alert("Infantry cannot attack artillery.");
             }
             endTurn();
           }
+        
+          // Ranger
+          else if (selectedEnvoy.type === "ranger") {
+            if (!target) {
+              moveEnvoyTo(selectedEnvoy, row, col); // move
+            } else if (isEnemy && target.type !== "artillery") {
+              destroyAt(row, col); // ranged attack
+            } else {
+              alert("Rangers cannot attack artillery.");
+            }
+            endTurn();
+          }
+        
+          // Artillery
+          else if (selectedEnvoy.type === "artillery") {
+            if (!totemInZone) {
+              alert("Artillery cannot fire without a matching Totem in this zone.");
+            } else if (isEnemy && target.type === "artillery") {
+              destroyAt(row, col);
+              endTurn();
+            } else {
+              alert("Artillery can only destroy other artillery.");
+            }
+          }
+        
           clearHighlights();
           selectedEnvoy = null;
           return;
         }
-
+        
         // Select your own envoy to move/attack
         const selected = cellData.find(c => c.row === row && c.col === col);
         if (selected && selected.contents === "envoy" && selected.color === playerColor) {
@@ -445,8 +482,25 @@ function buildBoard() {
 
         updateStatus();
       };
+
       cell.addEventListener('click', handler);
       cell.clickHandler = handler;
+
+      cell.addEventListener('mouseenter', () => {
+        const row = Number(cell.dataset.row);
+        const col = Number(cell.dataset.col);
+        const player = playerState.currentPlayer;
+        const playerColor = playerState[`player${player}Color`];
+      
+        const hovered = cellData.find(c => c.row === row && c.col === col);
+        if (hovered && hovered.contents === "envoy" && hovered.color === playerColor) {
+          highlightOptions(hovered);
+        }
+      });
+      
+      cell.addEventListener('mouseleave', () => {
+        clearHighlights();
+      });      
 
       board.appendChild(cell);
 
@@ -462,31 +516,30 @@ function buildBoard() {
 }
 
 function highlightOptions(envoy) {
-  const pattern = movementGrids[envoy.color];
+  const pattern = envoy.movement;
+  const colorClass = `highlight-${envoy.color}`;
 
   for (let [dx, dy] of pattern) {
-    const r = envoy.row + dx;
-    const c = envoy.col + dy;
-
+    const r = envoy.row + dy;
+    const c = envoy.col + dx;
     if (r >= 0 && r < 12 && c >= 0 && c < 8) {
       const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
       const target = cellData.find(cd => cd.row === r && cd.col === c);
 
-      // ATTACK targets
+      // Attack targets
       if (target && target.contents === "envoy" && target.color !== envoy.color) {
         if (envoy.type === "artillery" || envoy.type === "ranger") {
-          cell.classList.add('attack-option');
+          cell.classList.add("attack-option", colorClass);
           highlightedCells.push(cell);
         }
         if (envoy.type === "infantry") {
-          cell.classList.add('move-option'); // infantry moves in to attack
+          cell.classList.add("move-option", colorClass);
           highlightedCells.push(cell);
         }
       }
-
-      // MOVE targets
+      // Move targets
       if ((!target || !target.contents) && envoy.type !== "artillery") {
-        cell.classList.add('move-option');
+        cell.classList.add("move-option", colorClass);
         highlightedCells.push(cell);
       }
     }
@@ -590,6 +643,7 @@ document.getElementById("play-again").addEventListener("click", () => {
   cellData.length = 0;
   playerZones[1].clear();
   playerZones[2].clear();
+  updateZoneControlVisuals();
 
   // Clear board visually
   const board = document.getElementById("game-board");
