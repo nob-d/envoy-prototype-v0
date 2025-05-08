@@ -605,6 +605,9 @@ function buildBoard() {
         updateStatus();
       };
 
+      cell.addEventListener('click', handler);
+      cell.clickHandler = handler;     
+
       cell.addEventListener('mouseenter', () => {
         const row = Number(cell.dataset.row);
         const col = Number(cell.dataset.col);
