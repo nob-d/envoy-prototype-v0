@@ -18,11 +18,35 @@ function isInStartingZone(player, zone) {
   return false;
 }
 
+const playerZones = {
+  1: new Set(),
+  2: new Set(),
+};
+
+const zoneAdjacency = {
+  1: [2, 3],
+  2: [1, 4],
+  3: [1, 4, 5],
+  4: [2, 3, 6],
+  5: [3, 6],
+  6: [4, 5],
+};
+
+function isAdjacentToControlledZone(player, targetZone) {
+  const controlled = playerZones[player];
+  for (const zone of controlled) {
+    if (zoneAdjacency[zone].includes(Number(targetZone))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function placeTotem(cell, row, col) {
   // Choose a color if none is set
   let playerColor = playerState[`player${playerState.currentPlayer}Color`];
   if (!playerColor) {
-    const chosen = prompt(`Player ${playerState.currentPlayer}, choose your color (red, blue, green):`).toLowerCase();
+    const chosen = prompt(`Player ${playerState.currentPlayer}, choose your color (red, blue, green):`).trim().toLowerCase();
     if (!["red", "blue", "green"].includes(chosen)) {
       alert("Invalid color. Choose red, blue, or green.");
       return;
@@ -31,12 +55,16 @@ function placeTotem(cell, row, col) {
     playerColor = chosen;
   }
 
-  // Place the totem
-  const totem = document.createElement('div');
-  totem.classList.add('totem', playerColor);
-  cell.appendChild(totem);
-  cell.classList.add('occupied');
-  cell.removeEventListener('click', cell.clickHandler);
+// Place the totem
+const totem = document.createElement('div');
+totem.classList.add('totem', playerColor);
+cell.appendChild(totem);
+cell.classList.add('occupied');
+cell.removeEventListener('click', cell.clickHandler);
+
+// Record zone ownership
+const zone = Number(cell.dataset.zone);
+playerZones[playerState.currentPlayer].add(zone);
 
   // Switch turns
   playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
@@ -58,13 +86,19 @@ for (let row = 0; row < 12; row++) {
 
       const player = playerState.currentPlayer;
       const playerColor = playerState[`player${player}Color`];
-      const valid = !playerColor && isInStartingZone(player, zone);
-
-      if (valid || playerColor) {
+      
+      if (!playerColor && isInStartingZone(player, zone)) {
+        // First totem — allow placement
+        placeTotem(cell, row, col);
+      } else if (playerColor && playerZones[player].size === 0) {
+        alert(`Player ${player}: Your first totem must go in a starting zone.`);
+      } else if (playerColor && isAdjacentToControlledZone(player, zone)) {
+        // Legal follow-up placement
         placeTotem(cell, row, col);
       } else {
-        alert(`Player ${player}: You must place your first totem in your starting zones.`);
+        alert(`Player ${player}: You can only place totems in zones adjacent to your existing ones.`);
       }
+      
     };
 
     cell.addEventListener('click', handler);
