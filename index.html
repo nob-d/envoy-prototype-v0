@@ -8,7 +8,14 @@
 </head>
 <body>
   <h1>Totems & Envoys</h1>
+  <div id="status">Player 1’s turn</div>
+  <div id="victory" style="font-weight: bold; font-size: 1.2em; margin: 10px; color: darkred;"></div>
   <div id="game-board"></div>
+  <div id="summon-menu" style="display:none; margin-top:10px;">
+    <h3>Choose an Envoy to Summon</h3>
+    <div id="summon-options" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
+  </div>  
+  <button id="play-again" style="display:none; margin-top: 15px;">Play Again</button>
   <script src="script.js"></script>
 </body>
 </html>

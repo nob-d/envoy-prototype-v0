@@ -6,6 +6,165 @@ const playerState = {
   player2Color: null,
 };
 
+const cellData = []; // to track totems and envoys
+
+// Default envoy symbol by color
+const envoySymbols = {
+  red: "⚔️",
+  blue: "⚡",
+  green: "🐍",
+};
+
+// Envoy Data
+envoyData = {
+    "red": [
+        {
+            "name": "Red - Rare Infantry",
+            "rarity": "rare",
+            "role": "infantry",
+            "movement": [[0, -2], [0, -1], [0, 1], [0, 2]]
+        },
+        {
+            "name": "Red - Uncommon Infantry",
+            "rarity": "uncommon",
+            "role": "infantry",
+            "movement": [[-1, -1], [0, -1], [1, -1]]
+        },
+        {
+            "name": "Red - Uncommon Artillery",
+            "rarity": "uncommon",
+            "role": "artillery",
+            "movement": [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 0], [1, 1]]
+        },
+        {
+            "name": "Red - Common Infantry 1",
+            "rarity": "common",
+            "role": "infantry",
+            "movement": [[0, -2], [0, -1]]
+        },
+        {
+            "name": "Red - Common Ranger",
+            "rarity": "common",
+            "role": "ranger",
+            "movement": [[-1, 0], [0, 0], [1, 0]]
+        },
+        {
+            "name": "Red - Common Artillery",
+            "rarity": "common",
+            "role": "artillery",
+            "movement": [[-2, 0], [-1, 0], [1, 0], [2, 0]]
+        }
+    ],
+    "green": [
+        {
+            "name": "Green - Rare Ranger",
+            "rarity": "rare",
+            "role": "ranger",
+            "movement": [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]
+        },
+        {
+            "name": "Green - Uncommon Ranger",
+            "rarity": "uncommon",
+            "role": "ranger",
+            "movement": [[-1, -2], [-1, 2], [1, -2], [1, 2]]
+        },
+        {
+            "name": "Green - Uncommon Infantry",
+            "rarity": "uncommon",
+            "role": "infantry",
+            "movement": [[-2, -1], [-1, 0], [1, 0], [2, -1]]
+        },
+        {
+            "name": "Green - Common Ranger",
+            "rarity": "common",
+            "role": "ranger",
+            "movement": [[-1, -2], [0, 2], [2, -2]]
+        },
+        {
+            "name": "Green - Common Infantry",
+            "rarity": "common",
+            "role": "infantry",
+            "movement": [[-1, 0], [1, 0]]
+        },
+        {
+            "name": "Green - Common Artillery",
+            "rarity": "common",
+            "role": "artillery",
+            "movement": [[-2, 0], [0, -2], [0, 2], [2, 0]]
+        }
+    ],
+    "blue": [
+        {
+            "name": "Blue - Rare Artillery",
+            "rarity": "rare",
+            "role": "artillery",
+            "movement": [[-2, -1], [-1, -1], [0, -2], [0, -1], [1, -1], [2, -1]]
+        },
+        {
+            "name": "Blue - Uncommon Artillery",
+            "rarity": "uncommon",
+            "role": "artillery",
+            "movement": [[-2, -2], [-2, -1], [-2, 0], [-1, -2], [-1, -1], [0, -2], [1, 1]]
+        },
+        {
+            "name": "Blue - Uncommon Ranger",
+            "rarity": "uncommon",
+            "role": "ranger",
+            "movement": [[-1, 1], [-1, 2], [1, -1], [1, 0]]
+        },
+        {
+            "name": "Blue - Common Infantry",
+            "rarity": "common",
+            "role": "infantry",
+            "movement": [[-1, -1], [1, -1]]
+        },
+        {
+            "name": "Blue - Common Ranger",
+            "rarity": "common",
+            "role": "ranger",
+            "movement": [[-1, 2], [0, 0], [1, -1]]
+        },
+        {
+            "name": "Blue - Common Artillery",
+            "rarity": "common",
+            "role": "artillery",
+            "movement": [[-2, 2], [-1, 1], [1, -1], [2, -2]]
+        }
+    ]
+}
+
+// Default envoy type per color
+const envoyTypes = {
+  red: "infantry",
+  blue: "artillery",
+  green: "ranger"
+};
+
+let selectedEnvoy = null;
+let summonTarget = null;
+let highlightedCells = [];
+
+function updateStatus() {
+  const player = playerState.currentPlayer;
+  const color = playerState[`player${player}Color`] || "?";
+  document.getElementById("status").textContent = `Player ${player}'s turn (${color})`;
+}
+
+function isAdjacentToFriendlyTotem(row, col, playerColor) {
+  const directions = [
+    [-1, 0], [1, 0], [0, -1], [0, 1] // up, down, left, right
+  ];
+  for (let [dx, dy] of directions) {
+    const r = row + dx;
+    const c = col + dy;
+    const neighbor = cellData.find(cell => cell.row == r && cell.col == c);
+    if (neighbor && neighbor.contents === "totem" && neighbor.color === playerColor) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function getZone(row, col) {
   if (row < 4) return col < 4 ? 1 : 2;
   if (row < 8) return col < 4 ? 3 : 4;
@@ -53,57 +212,321 @@ function placeTotem(cell, row, col) {
     }
     playerState[`player${playerState.currentPlayer}Color`] = chosen;
     playerColor = chosen;
+    updateStatus();
   }
 
-// Place the totem
-const totem = document.createElement('div');
-totem.classList.add('totem', playerColor);
-cell.appendChild(totem);
-cell.classList.add('occupied');
-cell.removeEventListener('click', cell.clickHandler);
+  // Place the totem
+  const totem = document.createElement('div');
+  totem.classList.add('totem', playerColor);
+  cell.appendChild(totem);
+  cell.classList.add('occupied');
+  cell.removeEventListener('click', cell.clickHandler);
 
-// Record zone ownership
-const zone = Number(cell.dataset.zone);
-playerZones[playerState.currentPlayer].add(zone);
+  // Update cellData for this cell
+  const data = cellData.find(c => c.row === row && c.col === col);
+  if (data) {
+    data.contents = "totem";
+    data.color = playerColor;
+  }
+
+  // Record zone ownership
+  const zone = Number(cell.dataset.zone);
+  playerZones[playerState.currentPlayer].add(zone);
 
   // Switch turns
   playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
 }
 
-for (let row = 0; row < 12; row++) {
-  for (let col = 0; col < 8; col++) {
-    const cell = document.createElement('div');
-    cell.classList.add('cell');
+function openSummonMenu(row, col) {
+  const player = playerState.currentPlayer;
+  const color = playerState[`player${player}Color`];
+  const menu = document.getElementById("summon-menu");
+  const options = document.getElementById("summon-options");
 
-    const zone = getZone(row, col);
-    cell.dataset.row = row;
-    cell.dataset.col = col;
-    cell.dataset.zone = zone;
+  options.innerHTML = "";
+  summonTarget = { row, col };
 
-    // Add click handler
-    const handler = () => {
-      if (cell.classList.contains('occupied')) return;
-
-      const player = playerState.currentPlayer;
-      const playerColor = playerState[`player${player}Color`];
-      
-      if (!playerColor && isInStartingZone(player, zone)) {
-        // First totem — allow placement
-        placeTotem(cell, row, col);
-      } else if (playerColor && playerZones[player].size === 0) {
-        alert(`Player ${player}: Your first totem must go in a starting zone.`);
-      } else if (playerColor && isAdjacentToControlledZone(player, zone)) {
-        // Legal follow-up placement
-        placeTotem(cell, row, col);
-      } else {
-        alert(`Player ${player}: You can only place totems in zones adjacent to your existing ones.`);
-      }
-      
+  envoyData[color].forEach((envoy, index) => {
+    const button = document.createElement("button");
+    button.textContent = `${envoy.name} (${envoy.rarity}, ${envoy.role})`;
+    button.onclick = () => {
+      summonEnvoy(envoy, row, col);
+      menu.style.display = "none";
+      summonTarget = null;
     };
+    options.appendChild(button);
+  });
 
-    cell.addEventListener('click', handler);
-    cell.clickHandler = handler;
+  menu.style.display = "block";
+}
 
-    board.appendChild(cell);
+function summonEnvoy(envoyData, row, col) {
+  const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+  const playerColor = playerState[`player${playerState.currentPlayer}Color`];
+
+  const span = document.createElement('span');
+  span.textContent = envoySymbols[playerColor];
+  cell.appendChild(span);
+  cell.classList.add('occupied');
+  cell.removeEventListener('click', cell.clickHandler);
+
+  cellData.push({
+    row,
+    col,
+    zone: getZone(row, col),
+    contents: "envoy",
+    color: playerColor,
+    type: envoyData.role,
+    rarity: envoyData.rarity,
+    movement: envoyData.movement
+  });
+
+  endTurn();
+}
+
+function buildBoard() {
+  for (let row = 0; row < 12; row++) {
+    for (let col = 0; col < 8; col++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+
+      const zone = getZone(row, col);
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+      cell.dataset.zone = zone;
+
+      // Add click handler
+      const handler = () => {
+        const player = playerState.currentPlayer;
+        const playerColor = playerState[`player${player}Color`];
+        const row = Number(cell.dataset.row);
+        const col = Number(cell.dataset.col);
+        const zone = Number(cell.dataset.zone);
+
+        // Click a move or attack target
+        if (selectedEnvoy) {
+          if (cell.classList.contains('move-option')) {
+            moveEnvoyTo(selectedEnvoy, row, col);
+            endTurn();
+          } else if (cell.classList.contains('attack-option')) {
+            destroyAt(row, col);
+            if (selectedEnvoy.type !== "artillery") {
+              moveEnvoyTo(selectedEnvoy, row, col); // Infantry must move; Ranger can
+            }
+            endTurn();
+          }
+          clearHighlights();
+          selectedEnvoy = null;
+          return;
+        }
+
+        // Select your own envoy to move/attack
+        const selected = cellData.find(c => c.row === row && c.col === col);
+        if (selected && selected.contents === "envoy" && selected.color === playerColor) {
+          clearHighlights();
+          selectedEnvoy = selected;
+          highlightOptions(selected);
+          return;
+        }
+
+        // Prevent placing on occupied squares
+        if (cell.classList.contains('occupied')) return;
+
+        // First totem must be in starting zone
+        if (!playerColor && isInStartingZone(player, zone)) {
+          placeTotem(cell, row, col);
+          return;
+        }
+
+        // First totem placement enforcement
+        if (playerColor && playerZones[player].size === 0) {
+          alert(`Player ${player}: Your first totem must go in a starting zone.`);
+          return;
+        }
+
+        // Choose between totem and envoy
+        const action = prompt(`Player ${player}, type "totem" to place a totem or "envoy" to summon:`).toLowerCase();
+
+        if (action === "totem") {
+          if (isAdjacentToControlledZone(player, zone)) {
+            placeTotem(cell, row, col);
+          } else {
+            alert("Totem must be placed in an adjacent zone.");
+          }
+
+        } else if (action === "envoy") {
+          if (!isAdjacentToFriendlyTotem(row, col, playerColor)) {
+            alert("Envoy must be summoned adjacent to a friendly Totem.");
+            return;
+          }
+
+          openSummonMenu(row, col);
+
+        } else {
+          alert("Invalid action. Type 'totem' or 'envoy'.");
+        }
+
+        updateStatus();
+      };
+      cell.addEventListener('click', handler);
+      cell.clickHandler = handler;
+
+      board.appendChild(cell);
+
+      cellData.push({
+        row,
+        col,
+        zone,
+        contents: null,
+        color: null
+      });
+    }
   }
 }
+
+function highlightOptions(envoy) {
+  const pattern = movementGrids[envoy.color];
+
+  for (let [dx, dy] of pattern) {
+    const r = envoy.row + dx;
+    const c = envoy.col + dy;
+
+    if (r >= 0 && r < 12 && c >= 0 && c < 8) {
+      const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+      const target = cellData.find(cd => cd.row === r && cd.col === c);
+
+      // ATTACK targets
+      if (target && target.contents === "envoy" && target.color !== envoy.color) {
+        if (envoy.type === "artillery" || envoy.type === "ranger") {
+          cell.classList.add('attack-option');
+          highlightedCells.push(cell);
+        }
+        if (envoy.type === "infantry") {
+          cell.classList.add('move-option'); // infantry moves in to attack
+          highlightedCells.push(cell);
+        }
+      }
+
+      // MOVE targets
+      if ((!target || !target.contents) && envoy.type !== "artillery") {
+        cell.classList.add('move-option');
+        highlightedCells.push(cell);
+      }
+    }
+  }
+}
+
+function clearHighlights() {
+  for (let cell of highlightedCells) {
+    cell.classList.remove('move-option', 'attack-option');
+  }
+  highlightedCells = [];
+}
+
+function moveEnvoyTo(envoy, newRow, newCol) {
+  const fromCell = document.querySelector(`.cell[data-row='${envoy.row}'][data-col='${envoy.col}']`);
+  const toCell = document.querySelector(`.cell[data-row='${newRow}'][data-col='${newCol}']`);
+
+  // Clear old cell
+  fromCell.innerHTML = "";
+  fromCell.classList.remove('occupied');
+
+  // Move to new cell
+  const symbol = document.createElement('span');
+  symbol.textContent = envoySymbols[envoy.color];
+  toCell.appendChild(symbol);
+  toCell.classList.add('occupied');
+
+  // Update envoy tracking
+  envoy.row = newRow;
+  envoy.col = newCol;
+}
+
+function destroyAt(row, col) {
+  const index = cellData.findIndex(c => c.row === row && c.col === col && c.contents === "envoy");
+  if (index !== -1) {
+    cellData.splice(index, 1);
+    const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+    cell.innerHTML = "";
+    cell.classList.remove('occupied');
+  }
+}
+
+function endTurn() {
+  playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
+  updateStatus();
+  checkVictory(); // <- ADD THIS
+}
+
+function checkVictory() {
+  const p1Zones = getControlledZones(1);
+  const p2Zones = getControlledZones(2);
+
+  const p1Totems = countTotems(1);
+  const p2Totems = countTotems(2);
+
+  if (p1Totems >= 4 && p1Zones.length >= 3) {
+    document.getElementById("victory").textContent = "Player 1 wins!";
+    disableBoard();
+  } else if (p2Totems >= 4 && p2Zones.length >= 3) {
+    document.getElementById("victory").textContent = "Player 2 wins!";
+    disableBoard();
+  }
+}
+
+function getControlledZones(player) {
+  const opponent = player === 1 ? 2 : 1;
+  const controlled = [];
+
+  for (let z = 1; z <= 6; z++) {
+    const playerHasTotem = Array.from(cellData).some(c => c.zone == z && c.contents === "totem" && c.color === playerState[`player${player}Color`]);
+    const opponentHasTotem = Array.from(cellData).some(c => c.zone == z && c.contents === "totem" && c.color === playerState[`player${opponent}Color`]);
+    if (playerHasTotem && !opponentHasTotem) {
+      controlled.push(z);
+    }
+  }
+
+  return controlled;
+}
+
+function countTotems(player) {
+  return cellData.filter(c => c.contents === "totem" && c.color === playerState[`player${player}Color`]).length;
+}
+
+function disableBoard() {
+  document.querySelectorAll('.cell').forEach(cell => {
+    cell.removeEventListener('click', cell.clickHandler);
+    cell.style.cursor = 'not-allowed';
+  });
+
+  // Show "Play Again" button
+  document.getElementById("play-again").style.display = "inline-block";
+}
+
+document.getElementById("play-again").addEventListener("click", () => {
+  // Reset global state
+  playerState.currentPlayer = 1;
+  playerState.player1Color = null;
+  playerState.player2Color = null;
+  selectedEnvoy = null;
+  highlightedCells = [];
+  cellData.length = 0;
+  playerZones[1].clear();
+  playerZones[2].clear();
+
+  // Clear board visually
+  const board = document.getElementById("game-board");
+  board.innerHTML = "";
+
+  // Hide victory message & button
+  document.getElementById("victory").textContent = "";
+  document.getElementById("play-again").style.display = "none";
+
+  // Rebuild grid
+  buildBoard();
+  updateStatus();
+});
+
+
+buildBoard();
+updateStatus();
