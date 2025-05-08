@@ -17,127 +17,149 @@ const envoySymbols = {
 
 // Envoy Data
 envoyData = {
-    "red": [
-        {
-            "name": "Red - Rare Infantry",
-            "rarity": "rare",
-            "role": "infantry",
-            "movement": [[0, -2], [0, -1], [0, 1], [0, 2]]
-        },
-        {
-            "name": "Red - Uncommon Infantry",
-            "rarity": "uncommon",
-            "role": "infantry",
-            "movement": [[-1, -1], [0, -1], [1, -1]]
-        },
-        {
-            "name": "Red - Uncommon Artillery",
-            "rarity": "uncommon",
-            "role": "artillery",
-            "movement": [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 0], [1, 1]]
-        },
-        {
-            "name": "Red - Common Infantry 1",
-            "rarity": "common",
-            "role": "infantry",
-            "movement": [[0, -2], [0, -1]]
-        },
-        {
-            "name": "Red - Common Ranger",
-            "rarity": "common",
-            "role": "ranger",
-            "movement": [[-1, 0], [0, 0], [1, 0]]
-        },
-        {
-            "name": "Red - Common Artillery",
-            "rarity": "common",
-            "role": "artillery",
-            "movement": [[-2, 0], [-1, 0], [1, 0], [2, 0]]
-        }
-    ],
-    "green": [
-        {
-            "name": "Green - Rare Ranger",
-            "rarity": "rare",
-            "role": "ranger",
-            "movement": [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]
-        },
-        {
-            "name": "Green - Uncommon Ranger",
-            "rarity": "uncommon",
-            "role": "ranger",
-            "movement": [[-1, -2], [-1, 2], [1, -2], [1, 2]]
-        },
-        {
-            "name": "Green - Uncommon Infantry",
-            "rarity": "uncommon",
-            "role": "infantry",
-            "movement": [[-2, -1], [-1, 0], [1, 0], [2, -1]]
-        },
-        {
-            "name": "Green - Common Ranger",
-            "rarity": "common",
-            "role": "ranger",
-            "movement": [[-1, -2], [0, 2], [2, -2]]
-        },
-        {
-            "name": "Green - Common Infantry",
-            "rarity": "common",
-            "role": "infantry",
-            "movement": [[-1, 0], [1, 0]]
-        },
-        {
-            "name": "Green - Common Artillery",
-            "rarity": "common",
-            "role": "artillery",
-            "movement": [[-2, 0], [0, -2], [0, 2], [2, 0]]
-        }
-    ],
-    "blue": [
-        {
-            "name": "Blue - Rare Artillery",
-            "rarity": "rare",
-            "role": "artillery",
-            "movement": [[-2, -1], [-1, -1], [0, -2], [0, -1], [1, -1], [2, -1]]
-        },
-        {
-            "name": "Blue - Uncommon Artillery",
-            "rarity": "uncommon",
-            "role": "artillery",
-            "movement": [[-2, -2], [-2, -1], [-2, 0], [-1, -2], [-1, -1], [0, -2], [1, 1]]
-        },
-        {
-            "name": "Blue - Uncommon Ranger",
-            "rarity": "uncommon",
-            "role": "ranger",
-            "movement": [[-1, 1], [-1, 2], [1, -1], [1, 0]]
-        },
-        {
-            "name": "Blue - Common Infantry",
-            "rarity": "common",
-            "role": "infantry",
-            "movement": [[-1, -1], [1, -1]]
-        },
-        {
-            "name": "Blue - Common Ranger",
-            "rarity": "common",
-            "role": "ranger",
-            "movement": [[-1, 2], [0, 0], [1, -1]]
-        },
-        {
-            "name": "Blue - Common Artillery",
-            "rarity": "common",
-            "role": "artillery",
-            "movement": [[-2, 2], [-1, 1], [1, -1], [2, -2]]
-        }
-    ]
+  "red": [
+    {
+      "name": "Red - Rare Infantry",
+      "rarity": "rare",
+      "role": "infantry",
+      "movement": [[0, -2], [0, -1], [0, 1], [0, 2]]
+    },
+    {
+      "name": "Red - Uncommon Infantry",
+      "rarity": "uncommon",
+      "role": "infantry",
+      "movement": [[-1, -1], [0, -1], [1, -1]]
+    },
+    {
+      "name": "Red - Uncommon Artillery",
+      "rarity": "uncommon",
+      "role": "artillery",
+      "movement": [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 0], [1, 1]]
+    },
+    {
+      "name": "Red - Common Infantry 1",
+      "rarity": "common",
+      "role": "infantry",
+      "movement": [[0, -2], [0, -1]]
+    },
+    {
+      "name": "Red - Common Ranger",
+      "rarity": "common",
+      "role": "ranger",
+      "movement": [[-1, 0], [0, 0], [1, 0]]
+    },
+    {
+      "name": "Red - Common Artillery",
+      "rarity": "common",
+      "role": "artillery",
+      "movement": [[-2, 0], [-1, 0], [1, 0], [2, 0]]
+    }
+  ],
+  "green": [
+    {
+      "name": "Green - Rare Ranger",
+      "rarity": "rare",
+      "role": "ranger",
+      "movement": [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]
+    },
+    {
+      "name": "Green - Uncommon Ranger",
+      "rarity": "uncommon",
+      "role": "ranger",
+      "movement": [[-1, -2], [-1, 2], [1, -2], [1, 2]]
+    },
+    {
+      "name": "Green - Uncommon Infantry",
+      "rarity": "uncommon",
+      "role": "infantry",
+      "movement": [[-2, -1], [-1, 0], [1, 0], [2, -1]]
+    },
+    {
+      "name": "Green - Common Ranger",
+      "rarity": "common",
+      "role": "ranger",
+      "movement": [[-1, -2], [0, 2], [2, -2]]
+    },
+    {
+      "name": "Green - Common Infantry",
+      "rarity": "common",
+      "role": "infantry",
+      "movement": [[-1, 0], [1, 0]]
+    },
+    {
+      "name": "Green - Common Artillery",
+      "rarity": "common",
+      "role": "artillery",
+      "movement": [[-2, 0], [0, -2], [0, 2], [2, 0]]
+    }
+  ],
+  "blue": [
+    {
+      "name": "Blue - Rare Artillery",
+      "rarity": "rare",
+      "role": "artillery",
+      "movement": [[-2, -1], [-1, -1], [0, -2], [0, -1], [1, -1], [2, -1]]
+    },
+    {
+      "name": "Blue - Uncommon Artillery",
+      "rarity": "uncommon",
+      "role": "artillery",
+      "movement": [[-2, -2], [-2, -1], [-2, 0], [-1, -2], [-1, -1], [0, -2], [1, 1]]
+    },
+    {
+      "name": "Blue - Uncommon Ranger",
+      "rarity": "uncommon",
+      "role": "ranger",
+      "movement": [[-1, 1], [-1, 2], [1, -1], [1, 0]]
+    },
+    {
+      "name": "Blue - Common Infantry",
+      "rarity": "common",
+      "role": "infantry",
+      "movement": [[-1, -1], [1, -1]]
+    },
+    {
+      "name": "Blue - Common Ranger",
+      "rarity": "common",
+      "role": "ranger",
+      "movement": [[-1, 2], [0, 0], [1, -1]]
+    },
+    {
+      "name": "Blue - Common Artillery",
+      "rarity": "common",
+      "role": "artillery",
+      "movement": [[-2, 2], [-1, 1], [1, -1], [2, -2]]
+    }
+  ]
 }
 
-// Default envoy type per color
-const envoyTypes = {
-  red: "infantry",
-  blue: "artillery",
-  green: "ranger"
+// Playtest Roster
+
+const playerRosters = {
+  red: {
+    "Red - Rare Infantry": 1,
+    "Red - Uncommon Infantry": 1,
+    "Red - Uncommon Artillery": 1,
+    "Red - Common Infantry 1": 3,
+    "Red - Common Ranger": 2,
+    "Red - Common Artillery": 2
+  },
+  green: {
+    "Green - Rare Ranger": 1,
+    "Green - Uncommon Ranger": 1,
+    "Green - Uncommon Infantry": 1,
+    "Green - Common Ranger": 3,
+    "Green - Common Infantry": 2,
+    "Green - Common Artillery": 2
+  },
+  blue: {
+    "Blue - Rare Artillery": 1,
+    "Blue - Uncommon Artillery": 1,
+    "Blue - Uncommon Ranger": 1,
+    "Blue - Common Infantry": 3,
+    "Blue - Common Ranger": 2,
+    "Blue - Common Artillery": 2
+  }
 };
 
 let selectedEnvoy = null;
@@ -237,6 +259,18 @@ function placeTotem(cell, row, col) {
   playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
 }
 
+// Count summoned envoys of each type
+function countPlayerSummons(color) {
+  const roster = {};
+  for (let c of cellData) {
+    if (c.contents === "envoy" && c.color === color) {
+      const key = c.name;
+      roster[key] = (roster[key] || 0) + 1;
+    }
+  }
+  return roster;
+}
+
 function openSummonMenu(row, col) {
   const player = playerState.currentPlayer;
   const color = playerState[`player${player}Color`];
@@ -246,14 +280,25 @@ function openSummonMenu(row, col) {
   options.innerHTML = "";
   summonTarget = { row, col };
 
+  const used = countPlayerSummons(color);
+  const limit = playerRosters[color];
+
   envoyData[color].forEach((envoy, index) => {
+    const count = used[envoy.name] || 0;
+    const allowed = limit[envoy.name] || 0;
     const button = document.createElement("button");
     button.textContent = `${envoy.name} (${envoy.rarity}, ${envoy.role})`;
-    button.onclick = () => {
-      summonEnvoy(envoy, row, col);
-      menu.style.display = "none";
-      summonTarget = null;
-    };
+    button.disabled = count >= allowed;
+    if (!button.disabled) {
+      button.onclick = () => {
+        summonEnvoy(envoy, row, col);
+        menu.style.display = "none";
+        summonTarget = null;
+      };
+    } else {
+      button.style.opacity = 0.5;
+      button.title = "No more of this envoy available.";
+    }
     options.appendChild(button);
   });
 
@@ -278,10 +323,42 @@ function summonEnvoy(envoyData, row, col) {
     color: playerColor,
     type: envoyData.role,
     rarity: envoyData.rarity,
-    movement: envoyData.movement
+    movement: envoyData.movement,
+    name: envoyData.name // ✅ IMPORTANT FOR COUNTING
   });
 
   endTurn();
+}
+
+function highlightOptions(envoy) {
+  const pattern = envoy.movement;
+  const colorClass = `highlight-${envoy.color}`;
+
+  for (let [dx, dy] of pattern) {
+    const r = envoy.row + dy;
+    const c = envoy.col + dx;
+    if (r >= 0 && r < 12 && c >= 0 && c < 8) {
+      const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+      const target = cellData.find(cd => cd.row === r && cd.col === c);
+
+      // Attack targets
+      if (target && target.contents === "envoy" && target.color !== envoy.color) {
+        if (envoy.type === "artillery" || envoy.type === "ranger") {
+          cell.classList.add("attack-option", colorClass);
+          highlightedCells.push(cell);
+        }
+        if (envoy.type === "infantry") {
+          cell.classList.add("move-option", colorClass);
+          highlightedCells.push(cell);
+        }
+      }
+      // Move targets
+      if ((!target || !target.contents) && envoy.type !== "artillery") {
+        cell.classList.add("move-option", colorClass);
+        highlightedCells.push(cell);
+      }
+    }
+  }
 }
 
 function buildBoard() {
