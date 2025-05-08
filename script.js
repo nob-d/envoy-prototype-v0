@@ -331,6 +331,10 @@ function placeTotem(cell, row, col) {
     }
     playerState[`player${playerState.currentPlayer}Color`] = chosen;
     playerColor = chosen;
+
+    // ✅ Build player's personal envoy deck
+    buildPlayerDeck(chosen, playerState.currentPlayer);
+
     updateStatus();
     updateZoneControlVisuals();
   }
@@ -389,7 +393,8 @@ function openSummonMenu(row, col) {
     const count = used[envoy.name] || 0;
     const allowed = limit[envoy.name] || 0;
     const button = document.createElement("button");
-    button.textContent = `${envoy.name} (${envoy.rarity}, ${envoy.role})`;
+    const displayCount = `${count}/${allowed}`;
+    button.textContent = `${envoy.name} (${envoy.rarity}, ${envoy.role}) [${displayCount}]`;
     button.disabled = count >= allowed;
     if (!button.disabled) {
       button.onclick = () => {
@@ -407,29 +412,37 @@ function openSummonMenu(row, col) {
   menu.style.display = "block";
 }
 
-function summonEnvoy(envoyData, row, col) {
+function summonEnvoy(envoyData, row, col, playerNumber) {
   const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
-  const playerColor = playerState[`player${playerState.currentPlayer}Color`];
+  const playerColor = playerState[`player${playerNumber}Color`];
 
+  // Display the envoy symbol
   const span = document.createElement('span');
   span.textContent = envoySymbols[playerColor];
+  span.title = envoyData.name;  // 👈 Tooltip
   cell.appendChild(span);
   cell.classList.add('occupied');
   cell.removeEventListener('click', cell.clickHandler);
 
-  // ✅ Update existing entry in cellData
-  const existing = cellData.find(c => c.row === row && c.col === col);
-  if (existing) {
-    Object.assign(existing, {
+  // Mirror movement for Player 2
+  const mirroredMovement = (playerNumber === 2)
+    ? envoyData.movement.map(([dx, dy]) => [dx, -dy])
+    : envoyData.movement;
+
+  // ✅ Update the correct entry in cellData
+  const cellEntry = cellData.find(c => c.row === row && c.col === col);
+  if (cellEntry) {
+    Object.assign(cellEntry, {
       contents: "envoy",
       color: playerColor,
       type: envoyData.role,
       rarity: envoyData.rarity,
-      movement: envoyData.movement,
+      movement: mirroredMovement,
       name: envoyData.name,
       row,
       col,
-      zone: getZone(row, col)
+      zone: getZone(row, col),
+      source: { ...envoyData, player: playerNumber }
     });
   }
 
@@ -449,15 +462,22 @@ function updateZoneControlVisuals() {
       if (hasTotem) playersWithTotem.push(color);
     }
 
-    // Remove old zone classes
+    // Remove old zone styling
     zoneCells.forEach(cell => {
-      cell.classList.remove("zone-red", "zone-blue", "zone-green",
-                            "zone-contested-red", "zone-contested-blue", "zone-contested-green");
+      cell.classList.remove(
+        "zone-red", "zone-blue", "zone-green",
+        "zone-contested-red", "zone-contested-blue", "zone-contested-green",
+        "control-red", "control-blue", "control-green" // 👈 background tints
+      );
     });
 
     // Apply new styles
     if (playersWithTotem.length === 1) {
-      zoneCells.forEach(cell => cell.classList.add(`zone-${playersWithTotem[0]}`));
+      const color = playersWithTotem[0];
+      zoneCells.forEach(cell => {
+        cell.classList.add(`zone-${color}`);       // border
+        cell.classList.add(`control-${color}`);    // background tint
+      });
     } else if (playersWithTotem.length === 2) {
       zoneCells.forEach(cell => {
         cell.classList.add(`zone-contested-${playersWithTotem[0]}`);
@@ -466,7 +486,6 @@ function updateZoneControlVisuals() {
     }
   });
 }
-
 
 function buildBoard() {
   for (let row = 0; row < 12; row++) {
@@ -494,7 +513,7 @@ function buildBoard() {
           const playerColor = selectedEnvoy.color;
           const isEnemy = target && target.color !== playerColor;
           const totemInZone = cellData.some(c => c.contents === "totem" && c.zone === zone && c.color === playerColor);
-        
+
           // Infantry
           if (selectedEnvoy.type === "infantry") {
             if (!target) {
@@ -507,7 +526,7 @@ function buildBoard() {
             }
             endTurn();
           }
-        
+
           // Ranger
           else if (selectedEnvoy.type === "ranger") {
             if (!target) {
@@ -519,7 +538,7 @@ function buildBoard() {
             }
             endTurn();
           }
-        
+
           // Artillery
           else if (selectedEnvoy.type === "artillery") {
             if (!totemInZone) {
@@ -531,12 +550,12 @@ function buildBoard() {
               alert("Artillery can only destroy other artillery.");
             }
           }
-        
+
           clearHighlights();
           selectedEnvoy = null;
           return;
         }
-        
+
         // Select your own envoy to move/attack
         const selected = cellData.find(c => c.row === row && c.col === col);
         if (selected && selected.contents === "envoy" && selected.color === playerColor) {
@@ -586,24 +605,28 @@ function buildBoard() {
         updateStatus();
       };
 
-      cell.addEventListener('click', handler);
-      cell.clickHandler = handler;
-
       cell.addEventListener('mouseenter', () => {
         const row = Number(cell.dataset.row);
         const col = Number(cell.dataset.col);
         const player = playerState.currentPlayer;
         const playerColor = playerState[`player${player}Color`];
-      
+
         const hovered = cellData.find(c => c.row === row && c.col === col);
-        if (hovered && hovered.contents === "envoy" && hovered.color === playerColor) {
+
+        // ✅ Only highlight if it's this player's turn
+        if (
+          hovered &&
+          hovered.contents === "envoy" &&
+          hovered.color === playerColor
+        ) {
           highlightOptions(hovered);
         }
       });
-      
+
+
       cell.addEventListener('mouseleave', () => {
         clearHighlights();
-      });      
+      });
 
       board.appendChild(cell);
 
