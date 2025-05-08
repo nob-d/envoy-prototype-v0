@@ -133,8 +133,7 @@ envoyData = {
   ]
 }
 
-// Playtest Roster
-
+// ✅ 1. Player Roster Templates (unchanged)
 const playerRosters = {
   red: {
     "Red - Rare Infantry": 1,
@@ -161,6 +160,104 @@ const playerRosters = {
     "Blue - Common Artillery": 2
   }
 };
+
+// ✅ 2. Player decks (populated at color selection)
+let player1Deck = [];
+let player2Deck = [];
+
+function buildPlayerDeck(color, playerNumber) {
+  const deck = [];
+  const roster = playerRosters[color];
+  const pool = envoyData[color];
+
+  for (let unit of pool) {
+    const count = roster[unit.name] || 0;
+    for (let i = 0; i < count; i++) {
+      deck.push({ ...unit });
+    }
+  }
+
+  if (playerNumber === 1) player1Deck = deck;
+  else player2Deck = deck;
+}
+
+// ✅ 3. Count how many of each unit a player has summoned
+function countPlayerSummons(playerDeck) {
+  const roster = {};
+  for (let c of cellData) {
+    if (c.contents === "envoy" && playerDeck.includes(c.source)) {
+      const key = c.name;
+      roster[key] = (roster[key] || 0) + 1;
+    }
+  }
+  return roster;
+}
+
+// ✅ 4. Use correct deck during summon
+function openSummonMenu(row, col) {
+  const player = playerState.currentPlayer;
+  const color = playerState[`player${player}Color`];
+  const menu = document.getElementById("summon-menu");
+  const options = document.getElementById("summon-options");
+
+  const deck = player === 1 ? player1Deck : player2Deck;
+  const used = countPlayerSummons(deck);
+
+  options.innerHTML = "";
+  summonTarget = { row, col };
+
+  deck.forEach((envoy, index) => {
+    const count = used[envoy.name] || 0;
+    const allowed = playerRosters[color][envoy.name] || 0;
+    const button = document.createElement("button");
+    button.textContent = `${envoy.name} (${envoy.rarity}, ${envoy.role})`;
+    button.disabled = count >= allowed;
+    if (!button.disabled) {
+      button.onclick = () => {
+        summonEnvoy(envoy, row, col, player);
+        menu.style.display = "none";
+        summonTarget = null;
+      };
+    } else {
+      button.style.opacity = 0.5;
+      button.title = "No more of this envoy available.";
+    }
+    options.appendChild(button);
+  });
+
+  menu.style.display = "block";
+}
+
+// ✅ 5. Pass player number into summonEnvoy for proper tracking
+function summonEnvoy(envoyData, row, col, playerNumber) {
+  const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+  const playerColor = playerState[`player${playerNumber}Color`];
+
+  const span = document.createElement('span');
+  span.textContent = envoySymbols[playerColor];
+  cell.appendChild(span);
+  cell.classList.add('occupied');
+  cell.removeEventListener('click', cell.clickHandler);
+
+  const existing = cellData.find(c => c.row === row && c.col === col);
+  if (existing) {
+    Object.assign(existing, {
+      contents: "envoy",
+      color: playerColor,
+      type: envoyData.role,
+      rarity: envoyData.rarity,
+      movement: envoyData.movement,
+      name: envoyData.name,
+      row,
+      col,
+      zone: getZone(row, col),
+      source: envoyData // Track source reference
+    });
+  }
+
+  endTurn();
+} // End summonEnvoy
+
 
 let selectedEnvoy = null;
 let summonTarget = null;
@@ -256,9 +353,13 @@ function placeTotem(cell, row, col) {
   const zone = Number(cell.dataset.zone);
   playerZones[playerState.currentPlayer].add(zone);
 
+  // ✅ Always update zone visuals
+  updateZoneControlVisuals();
+
   // Switch turns
   playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
 }
+
 
 // Count summoned envoys of each type
 function countPlayerSummons(color) {
@@ -316,23 +417,25 @@ function summonEnvoy(envoyData, row, col) {
   cell.classList.add('occupied');
   cell.removeEventListener('click', cell.clickHandler);
 
-  // Create the envoy object and include row/col directly
-  const newEnvoy = {
-    row,
-    col,
-    zone: getZone(row, col),
-    contents: "envoy",
-    color: playerColor,
-    type: envoyData.role,
-    rarity: envoyData.rarity,
-    movement: envoyData.movement,
-    name: envoyData.name
-  };
-
-  cellData.push(newEnvoy); // Store it in cellData
+  // ✅ Update existing entry in cellData
+  const existing = cellData.find(c => c.row === row && c.col === col);
+  if (existing) {
+    Object.assign(existing, {
+      contents: "envoy",
+      color: playerColor,
+      type: envoyData.role,
+      rarity: envoyData.rarity,
+      movement: envoyData.movement,
+      name: envoyData.name,
+      row,
+      col,
+      zone: getZone(row, col)
+    });
+  }
 
   endTurn();
 }
+
 
 function updateZoneControlVisuals() {
   const zones = [1, 2, 3, 4, 5, 6];
@@ -526,17 +629,30 @@ function highlightOptions(envoy) {
       const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
       const target = cellData.find(cd => cd.row === r && cd.col === c);
 
+      // Artillery must have same-color totem in zone
+      const zone = getZone(r, c);
+      const totemInZone = cellData.some(cd =>
+        cd.contents === "totem" &&
+        cd.zone === zone &&
+        cd.color === envoy.color
+      );
+
       // Attack targets
       if (target && target.contents === "envoy" && target.color !== envoy.color) {
-        if (envoy.type === "artillery" || envoy.type === "ranger") {
+        if (envoy.type === "artillery") {
+          if (totemInZone && target.type === "artillery") {
+            cell.classList.add("attack-option", colorClass);
+            highlightedCells.push(cell);
+          }
+        } else if (envoy.type === "ranger") {
           cell.classList.add("attack-option", colorClass);
           highlightedCells.push(cell);
-        }
-        if (envoy.type === "infantry") {
-          cell.classList.add("move-option", colorClass);
+        } else if (envoy.type === "infantry" && target.type !== "artillery") {
+          cell.classList.add("move-option", colorClass); // Infantry move+attack
           highlightedCells.push(cell);
         }
       }
+
       // Move targets
       if ((!target || !target.contents) && envoy.type !== "artillery") {
         cell.classList.add("move-option", colorClass);
