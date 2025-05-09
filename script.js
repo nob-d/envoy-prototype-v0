@@ -38,11 +38,31 @@ const playerZones = {
 
 // ===== GAME CONFIGURATION =====
 
-// Default envoy symbol by color
+// Playtest envoy symbols for now
 const envoySymbols = {
-  red: "⚔️",
-  blue: "⚡",
-  green: "🐍",
+  // Red Envoys (Crucible World)
+  "Red - Rare Infantry": "⚔️",
+  "Red - Uncommon Infantry": "🗡️",
+  "Red - Uncommon Artillery": "🏹",
+  "Red - Common Infantry 1": "🪓",
+  "Red - Common Ranger": "🔪",
+  "Red - Common Artillery": "🛡️",
+  
+  // Blue Envoys (Prism Realm)
+  "Blue - Rare Artillery": "⚡",
+  "Blue - Uncommon Artillery": "🔮",
+  "Blue - Uncommon Ranger": "✨",
+  "Blue - Common Infantry": "🧊",
+  "Blue - Common Ranger": "💎",
+  "Blue - Common Artillery": "🌀",
+  
+  // Green Envoys (Verdigrave)
+  "Green - Rare Ranger": "🌿",
+  "Green - Uncommon Ranger": "🍄",
+  "Green - Uncommon Infantry": "🐍",
+  "Green - Common Infantry": "🌱",
+  "Green - Common Ranger": "🦎",
+  "Green - Common Artillery": "🌵"
 };
 
 // Zone adjacency mapping
@@ -558,7 +578,7 @@ function summonEnvoy(envoyData, row, col, playerNumber = null) {
 
   // Display the envoy symbol
   const span = document.createElement('span');
-  span.textContent = envoySymbols[playerColor];
+  span.textContent = envoySymbols[envoyData.name];
   span.title = envoyData.name;  // Tooltip
   cell.appendChild(span);
   cell.classList.add('occupied');
@@ -615,7 +635,7 @@ function moveEnvoyTo(envoy, newRow, newCol) {
 
   // Move to new cell
   const symbol = document.createElement('span');
-  symbol.textContent = envoySymbols[envoy.color];
+  symbol.textContent = envoySymbols[envoy.name];
   symbol.title = envoy.name; // Add tooltip
   toCell.appendChild(symbol);
   toCell.classList.add('occupied');
