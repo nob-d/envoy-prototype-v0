@@ -56,7 +56,11 @@ const zoneAdjacency = {
 };
 
 // Envoy Data
-const envoyData = {
+// ===== CORRECTED MOVEMENT PATTERNS =====
+// This code provides corrected movement patterns for Envoys with incorrect movement
+
+// RED ENVOYS CORRECTIONS
+envoyData = {
   "red": [
     {
       "name": "Red - Rare Infantry",
@@ -66,9 +70,9 @@ const envoyData = {
     },
     {
       "name": "Red - Uncommon Infantry",
-      "rarity": "uncommon",
+      "rarity": "uncommon", 
       "role": "infantry",
-      "movement": [[-1, -1], [0, -1], [1, -1]]
+      "movement": [[-1, -2], [0, -1], [1, -2]] // FIXED: was [[-1, -1], [0, -1], [1, -1]]
     },
     {
       "name": "Red - Uncommon Artillery",
@@ -86,7 +90,7 @@ const envoyData = {
       "name": "Red - Common Ranger",
       "rarity": "common",
       "role": "ranger",
-      "movement": [[-1, 0], [0, 0], [1, 0]]
+      "movement": [[-1, -2], [0, -2], [1, -2]] // FIXED: was [[-1, 0], [0, 0], [1, 0]]
     },
     {
       "name": "Red - Common Artillery",
@@ -150,7 +154,7 @@ const envoyData = {
       "name": "Blue - Uncommon Ranger",
       "rarity": "uncommon",
       "role": "ranger",
-      "movement": [[-1, 1], [-1, 2], [1, -1], [1, 0]]
+      "movement": [[-1, 1], [-1, 2], [1, -2], [1, -1]] // FIXED: was [[-1, 1], [-1, 2], [1, -1], [1, 0]]
     },
     {
       "name": "Blue - Common Infantry",
@@ -162,7 +166,7 @@ const envoyData = {
       "name": "Blue - Common Ranger",
       "rarity": "common",
       "role": "ranger",
-      "movement": [[-1, 2], [0, 0], [1, -1]]
+      "movement": [[-1, 2], [0, -2], [1, -1]] // FIXED: was [[-1, 2], [0, 0], [1, -1]]
     },
     {
       "name": "Blue - Common Artillery",
@@ -386,14 +390,20 @@ function highlightOptions(envoy) {
   const pattern = envoy.movement;
   const colorClass = `highlight-${envoy.color}`;
 
+  // First clear any existing highlights
+  clearHighlights();
+
   for (let [dx, dy] of pattern) {
     const r = envoy.row + dy;
     const c = envoy.col + dx;
     if (r >= 0 && r < 12 && c >= 0 && c < 8) {
       const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+      if (!cell) continue; // Skip if cell not found
+      
       const target = cellData.find(cd => cd.row === r && cd.col === c);
+      const hasContents = target && target.contents;
 
-      // Artillery must have same-color totem in zone
+      // Zone-specific checks for artillery
       const zone = getZone(r, c);
       const totemInZone = cellData.some(cd =>
         cd.contents === "totem" &&
@@ -402,23 +412,25 @@ function highlightOptions(envoy) {
       );
 
       // Attack targets
-      if (target && target.contents === "envoy" && target.color !== envoy.color) {
+      if (hasContents && target.contents === "envoy" && target.color !== envoy.color) {
         if (envoy.type === "artillery") {
           if (totemInZone && target.type === "artillery") {
             cell.classList.add("attack-option", colorClass);
             highlightedCells.push(cell);
           }
         } else if (envoy.type === "ranger") {
-          cell.classList.add("attack-option", colorClass);
-          highlightedCells.push(cell);
+          if (target.type !== "artillery") {
+            cell.classList.add("attack-option", colorClass);
+            highlightedCells.push(cell);
+          }
         } else if (envoy.type === "infantry" && target.type !== "artillery") {
           cell.classList.add("move-option", colorClass); // Infantry move+attack
           highlightedCells.push(cell);
         }
       }
 
-      // Move targets
-      if ((!target || !target.contents) && envoy.type !== "artillery") {
+      // Move targets (only for non-artillery)
+      if (!hasContents && envoy.type !== "artillery") {
         cell.classList.add("move-option", colorClass);
         highlightedCells.push(cell);
       }
@@ -581,16 +593,25 @@ function summonEnvoy(envoyData, row, col, playerNumber = null) {
  * Move an envoy to a new position
  */
 function moveEnvoyTo(envoy, newRow, newCol) {
+  console.log("Moving envoy from", envoy.row, envoy.col, "to", newRow, newCol);
+  
   const fromCell = document.querySelector(`.cell[data-row='${envoy.row}'][data-col='${envoy.col}']`);
   const toCell = document.querySelector(`.cell[data-row='${newRow}'][data-col='${newCol}']`);
+
+  if (!fromCell || !toCell) {
+    console.error("Could not find cells for movement");
+    return;
+  }
 
   // Clear old cell
   fromCell.innerHTML = "";
   fromCell.classList.remove('occupied');
-
+  
   // Restore click handler on old cell
-  fromCell.removeEventListener('click', fromCell.clickHandler);
-  fromCell.addEventListener('click', fromCell.clickHandler);
+  if (fromCell.clickHandler) {
+    fromCell.removeEventListener('click', fromCell.clickHandler);
+    fromCell.addEventListener('click', fromCell.clickHandler);
+  }
 
   // Move to new cell
   const symbol = document.createElement('span');
@@ -598,37 +619,41 @@ function moveEnvoyTo(envoy, newRow, newCol) {
   symbol.title = envoy.name; // Add tooltip
   toCell.appendChild(symbol);
   toCell.classList.add('occupied');
-  toCell.removeEventListener('click', toCell.clickHandler);
-
-  // Update envoy tracking in cellData for the old position
-  const oldCell = cellData.find(c => c.row === envoy.row && c.col === envoy.col);
-  if (oldCell) {
-    oldCell.contents = null;
-    oldCell.color = null;
-    oldCell.type = null;
-    oldCell.rarity = null;
-    oldCell.movement = null;
-    oldCell.name = null;
-    oldCell.source = null;
+  
+  // Remove click handler from destination cell
+  if (toCell.clickHandler) {
+    toCell.removeEventListener('click', toCell.clickHandler);
   }
 
-  // Update the cellData for the new position
-  const newCell = cellData.find(c => c.row === newRow && c.col === newCol);
-  if (newCell) {
-    newCell.contents = "envoy";
-    newCell.color = envoy.color;
-    newCell.type = envoy.type;
-    newCell.rarity = envoy.rarity;
-    newCell.movement = envoy.movement;
-    newCell.name = envoy.name;
-    newCell.source = envoy.source;
+  // Update cell data for the old position
+  const oldCellData = cellData.find(c => c.row === envoy.row && c.col === envoy.col);
+  if (oldCellData) {
+    oldCellData.contents = null;
+    oldCellData.color = null;
+    oldCellData.type = null;
+    oldCellData.rarity = null;
+    oldCellData.movement = null;
+    oldCellData.name = null;
+    oldCellData.source = null;
   }
-
-  // Update envoy's own position reference
+  
+  // Update cell data for the new position
+  const newCellData = cellData.find(c => c.row === newRow && c.col === newCol);
+  if (newCellData) {
+    newCellData.contents = "envoy";
+    newCellData.color = envoy.color;
+    newCellData.type = envoy.type;
+    newCellData.rarity = envoy.rarity;
+    newCellData.movement = envoy.movement;
+    newCellData.name = envoy.name;
+    newCellData.source = envoy.source;
+  }
+  
+  // Update the envoy's own position reference
   envoy.row = newRow;
   envoy.col = newCol;
-
-  // Update zone control after movement
+  
+  // Update zone control visuals
   updateZoneControlVisuals();
 }
 
@@ -636,11 +661,12 @@ function moveEnvoyTo(envoy, newRow, newCol) {
  * Destroy an envoy at a given position
  */
 function destroyAt(row, col) {
+  console.log("Destroying at:", row, col);
   const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
   const cellEntry = cellData.find(c => c.row === row && c.col === col);
-
-  if (cellEntry && cellEntry.contents === "envoy") {
-    // Clear only the envoy data but keep the cell entry
+  
+  if (cellEntry) {
+    // Clear the cell's data
     cellEntry.contents = null;
     cellEntry.color = null;
     cellEntry.type = null;
@@ -648,14 +674,16 @@ function destroyAt(row, col) {
     cellEntry.movement = null;
     cellEntry.name = null;
     cellEntry.source = null;
-
+    
     // Clear visual display
     cell.innerHTML = "";
     cell.classList.remove('occupied');
-
-    // Re-add click handler
-    cell.removeEventListener('click', cell.clickHandler);
-    cell.addEventListener('click', cell.clickHandler);
+    
+    // Re-add click handler if it was removed
+    if (cell.clickHandler) {
+      cell.removeEventListener('click', cell.clickHandler);
+      cell.addEventListener('click', cell.clickHandler);
+    }
   }
 }
 
@@ -710,44 +738,85 @@ function buildBoard() {
         const col = Number(cell.dataset.col);
         const zone = Number(cell.dataset.zone);
 
-        // Click a move or attack target
+        // PART 1: HANDLE SELECTING AND MOVING/ATTACKING WITH ENVOYS
         if (selectedEnvoy) {
-          const target = cellData.find(c => c.row === row && c.col === col);
-          const zone = Number(cell.dataset.zone);
-          const playerColor = selectedEnvoy.color;
-          const isEnemy = target && target.color !== playerColor;
-          const totemInZone = cellData.some(c => c.contents === "totem" && c.zone === zone && c.color === playerColor);
+          console.log("Selected envoy action:", selectedEnvoy); // Debug logging
 
-          // Infantry
-          if (selectedEnvoy.type === "infantry") {
-            if (!target) {
-              moveEnvoyTo(selectedEnvoy, row, col);
-            } else if (isEnemy && target.type !== "artillery") {
-              destroyAt(row, col);
-              moveEnvoyTo(selectedEnvoy, row, col);
+          // Get target cell data - check if it has contents
+          const targetCell = cellData.find(c => c.row === row && c.col === col);
+          const hasContents = targetCell && targetCell.contents;
+          const isEnemy = hasContents && targetCell.color !== selectedEnvoy.color;
+
+          // Check if this is a valid move/attack option (must be highlighted)
+          const isValidOption = cell.classList.contains('move-option') ||
+            cell.classList.contains('attack-option');
+
+          if (!isValidOption) {
+            console.log("Not a valid movement option");
+            // If clicking on another friendly envoy, select it instead
+            if (hasContents && targetCell.contents === 'envoy' && targetCell.color === playerColor) {
+              clearHighlights();
+              selectedEnvoy = targetCell;
+              highlightOptions(selectedEnvoy);
             } else {
-              alert("Infantry cannot attack artillery.");
+              // Otherwise, just deselect the current envoy
+              clearHighlights();
+              selectedEnvoy = null;
             }
-            endTurn();
+            return;
           }
 
+          // Check if a friendly totem is in the zone (for artillery attacks)
+          const totemInZone = cellData.some(c =>
+            c.contents === "totem" &&
+            c.zone === zone &&
+            c.color === selectedEnvoy.color
+          );
+
+          console.log("Processing move/attack with:", selectedEnvoy.type);
+
+          // Process by envoy type
+          if (selectedEnvoy.type === "infantry") {
+            if (!hasContents) {
+              // Empty cell - just move there
+              moveEnvoyTo(selectedEnvoy, row, col);
+              endTurn();
+            } else if (isEnemy && targetCell.contents === "envoy") {
+              if (targetCell.type !== "artillery") {
+                // Attack and capture position
+                destroyAt(row, col);
+                moveEnvoyTo(selectedEnvoy, row, col);
+                endTurn();
+              } else {
+                alert("Infantry cannot attack artillery.");
+              }
+            } else {
+              console.log("Invalid infantry action");
+            }
+          }
           // Ranger
           else if (selectedEnvoy.type === "ranger") {
-            if (!target) {
-              moveEnvoyTo(selectedEnvoy, row, col); // move
-            } else if (isEnemy && target.type !== "artillery") {
-              destroyAt(row, col); // ranged attack
+            if (!hasContents) {
+              // Empty cell - move there
+              moveEnvoyTo(selectedEnvoy, row, col);
+              endTurn();
+            } else if (isEnemy && targetCell.contents === "envoy") {
+              if (targetCell.type !== "artillery") {
+                // Attack but don't move
+                destroyAt(row, col);
+                endTurn();
+              } else {
+                alert("Rangers cannot attack artillery.");
+              }
             } else {
-              alert("Rangers cannot attack artillery.");
+              console.log("Invalid ranger action");
             }
-            endTurn();
           }
-
           // Artillery
           else if (selectedEnvoy.type === "artillery") {
             if (!totemInZone) {
               alert("Artillery cannot fire without a matching Totem in this zone.");
-            } else if (isEnemy && target.type === "artillery") {
+            } else if (isEnemy && targetCell.contents === "envoy" && targetCell.type === "artillery") {
               destroyAt(row, col);
               endTurn();
             } else {
@@ -760,15 +829,19 @@ function buildBoard() {
           return;
         }
 
-        // Select your own envoy to move/attack
-        const selected = cellData.find(c => c.row === row && c.col === col);
-        if (selected && selected.contents === "envoy" && selected.color === playerColor) {
+        // PART 2: HANDLE SELECTING YOUR OWN ENVOY
+        const selected = cellData.find(c => c.row === row && c.col === col &&
+          c.contents === "envoy" && c.color === playerColor);
+        if (selected) {
+          console.log("Selecting envoy:", selected);
           clearHighlights();
           selectedEnvoy = selected;
           highlightOptions(selected);
           return;
         }
 
+        // PART 3: HANDLE TOTEM PLACEMENT AND ENVOY SUMMONING
+        // (This part of your code is fine, so I'm not changing it)
         // Prevent placing on occupied squares
         if (cell.classList.contains('occupied')) return;
 
@@ -793,15 +866,12 @@ function buildBoard() {
           } else {
             alert("Totem must be placed in an adjacent zone.");
           }
-
         } else if (action === "envoy") {
           if (!isAdjacentToFriendlyTotem(row, col, playerColor)) {
             alert("Envoy must be summoned adjacent to a friendly Totem.");
             return;
           }
-
           openSummonMenu(row, col);
-
         } else {
           alert("Invalid action. Type 'totem' or 'envoy'.");
         }
@@ -815,12 +885,12 @@ function buildBoard() {
         const col = Number(cell.dataset.col);
         const player = playerState.currentPlayer;
         const playerColor = playerState[`player${player}Color`];
-
+      
         const hovered = cellData.find(c => c.row === row && c.col === col);
-
-        // Only show potential movements if no unit is currently selected
+      
+        // Only show hover highlights if no unit is currently selected for movement
         if (
-          !selectedEnvoy && // Only highlight if no unit is selected
+          !selectedEnvoy && // Only highlight on hover if no unit is selected
           hovered &&
           hovered.contents === "envoy" &&
           hovered.color === playerColor
@@ -828,9 +898,9 @@ function buildBoard() {
           highlightOptions(hovered);
         }
       });
-
+      
       cell.addEventListener('mouseleave', () => {
-        // Only clear highlights if no unit is currently selected
+        // Only clear highlights on mouseleave if no unit is selected for movement
         if (!selectedEnvoy) {
           clearHighlights();
         }
@@ -848,6 +918,47 @@ function buildBoard() {
     }
   }
 }
+
+// ===== DEBUG FUNCTIONS =====
+
+function debugGameState() {
+  console.log("=== GAME STATE DEBUG ===");
+  console.log("Current Player:", playerState.currentPlayer);
+  console.log("Player 1 Color:", playerState.player1Color);
+  console.log("Player 2 Color:", playerState.player2Color);
+  console.log("Selected Envoy:", selectedEnvoy);
+  console.log("Player 1 Zones:", Array.from(playerZones[1]));
+  console.log("Player 2 Zones:", Array.from(playerZones[2]));
+  
+  // Count units by type and player
+  const counts = {
+    player1: { totems: 0, infantry: 0, ranger: 0, artillery: 0 },
+    player2: { totems: 0, infantry: 0, ranger: 0, artillery: 0 }
+  };
+  
+  for (const cell of cellData) {
+    if (!cell.contents) continue;
+    
+    if (cell.color === playerState.player1Color) {
+      if (cell.contents === "totem") counts.player1.totems++;
+      else if (cell.contents === "envoy") counts.player1[cell.type]++;
+    } else if (cell.color === playerState.player2Color) {
+      if (cell.contents === "totem") counts.player2.totems++;
+      else if (cell.contents === "envoy") counts.player2[cell.type]++;
+    }
+  }
+  
+  console.log("Unit Counts:", counts);
+  console.log("========================");
+}
+
+// Call this at the end of each turn
+function endTurn() {
+  playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
+  updateStatus();
+  updateZoneControlVisuals();
+  checkVictory();
+  debugGameState(); // Add this line for debugging
 
 // ===== INITIALIZATION AND EVENT LISTENERS =====
 
