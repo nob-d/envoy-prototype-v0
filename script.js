@@ -80,7 +80,7 @@ const zoneAdjacency = {
 // This code provides corrected movement patterns for Envoys with incorrect movement
 
 // RED ENVOYS CORRECTIONS
-envoyData = {
+const envoyData = {  // Added 'const' keyword here - was missing
   "red": [
     {
       "name": "Red - Rare Infantry",
@@ -707,6 +707,39 @@ function destroyAt(row, col) {
   }
 }
 
+// ===== DEBUG FUNCTIONS =====
+
+function debugGameState() {
+  console.log("=== GAME STATE DEBUG ===");
+  console.log("Current Player:", playerState.currentPlayer);
+  console.log("Player 1 Color:", playerState.player1Color);
+  console.log("Player 2 Color:", playerState.player2Color);
+  console.log("Selected Envoy:", selectedEnvoy);
+  console.log("Player 1 Zones:", Array.from(playerZones[1]));
+  console.log("Player 2 Zones:", Array.from(playerZones[2]));
+  
+  // Count units by type and player
+  const counts = {
+    player1: { totems: 0, infantry: 0, ranger: 0, artillery: 0 },
+    player2: { totems: 0, infantry: 0, ranger: 0, artillery: 0 }
+  };
+  
+  for (const cell of cellData) {
+    if (!cell.contents) continue;
+    
+    if (cell.color === playerState.player1Color) {
+      if (cell.contents === "totem") counts.player1.totems++;
+      else if (cell.contents === "envoy") counts.player1[cell.type]++;
+    } else if (cell.color === playerState.player2Color) {
+      if (cell.contents === "totem") counts.player2.totems++;
+      else if (cell.contents === "envoy") counts.player2[cell.type]++;
+    }
+  }
+  
+  console.log("Unit Counts:", counts);
+  console.log("========================");
+}
+
 /**
  * End the current player's turn
  */
@@ -715,7 +748,8 @@ function endTurn() {
   updateStatus();
   updateZoneControlVisuals();
   checkVictory();
-}
+  debugGameState(); // Add this line for debugging
+} // Added closing brace here - was missing
 
 /**
  * Check if a player has won the game
@@ -861,7 +895,6 @@ function buildBoard() {
         }
 
         // PART 3: HANDLE TOTEM PLACEMENT AND ENVOY SUMMONING
-        // (This part of your code is fine, so I'm not changing it)
         // Prevent placing on occupied squares
         if (cell.classList.contains('occupied')) return;
 
@@ -938,47 +971,6 @@ function buildBoard() {
     }
   }
 }
-
-// ===== DEBUG FUNCTIONS =====
-
-function debugGameState() {
-  console.log("=== GAME STATE DEBUG ===");
-  console.log("Current Player:", playerState.currentPlayer);
-  console.log("Player 1 Color:", playerState.player1Color);
-  console.log("Player 2 Color:", playerState.player2Color);
-  console.log("Selected Envoy:", selectedEnvoy);
-  console.log("Player 1 Zones:", Array.from(playerZones[1]));
-  console.log("Player 2 Zones:", Array.from(playerZones[2]));
-  
-  // Count units by type and player
-  const counts = {
-    player1: { totems: 0, infantry: 0, ranger: 0, artillery: 0 },
-    player2: { totems: 0, infantry: 0, ranger: 0, artillery: 0 }
-  };
-  
-  for (const cell of cellData) {
-    if (!cell.contents) continue;
-    
-    if (cell.color === playerState.player1Color) {
-      if (cell.contents === "totem") counts.player1.totems++;
-      else if (cell.contents === "envoy") counts.player1[cell.type]++;
-    } else if (cell.color === playerState.player2Color) {
-      if (cell.contents === "totem") counts.player2.totems++;
-      else if (cell.contents === "envoy") counts.player2[cell.type]++;
-    }
-  }
-  
-  console.log("Unit Counts:", counts);
-  console.log("========================");
-}
-
-// Call this at the end of each turn
-function endTurn() {
-  playerState.currentPlayer = playerState.currentPlayer === 1 ? 2 : 1;
-  updateStatus();
-  updateZoneControlVisuals();
-  checkVictory();
-  debugGameState(); // Add this line for debugging
 
 // ===== INITIALIZATION AND EVENT LISTENERS =====
 
