@@ -106,3 +106,13 @@ body {
 .control-green {
   background-color: rgba(0, 128, 0, 0.08);
 }
+
+.selected-envoy {
+ box-shadow: 0 0 10px 2px gold;
+ animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+ from { box-shadow: 0 0 5px 2px gold; }
+ to { box-shadow: 0 0 10px 4px gold; }
+}

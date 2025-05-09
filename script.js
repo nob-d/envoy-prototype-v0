@@ -80,7 +80,7 @@ const zoneAdjacency = {
 // This code provides corrected movement patterns for Envoys with incorrect movement
 
 // RED ENVOYS CORRECTIONS
-const envoyData = {  // Added 'const' keyword here - was missing
+const envoyData = {
   "red": [
     {
       "name": "Red - Rare Infantry",
@@ -431,28 +431,40 @@ function highlightOptions(envoy) {
         cd.color === envoy.color
       );
 
-      // Attack targets
-      if (hasContents && target.contents === "envoy" && target.color !== envoy.color) {
-        if (envoy.type === "artillery") {
-          if (totemInZone && target.type === "artillery") {
+      // ===== ARTILLERY =====
+      if (envoy.type === "artillery") {
+        // Artillery can only attack other artillery pieces where there's a friendly totem in the zone
+        if (hasContents && target.contents === "envoy" && target.color !== envoy.color && target.type === "artillery") {
+          if (totemInZone) {
             cell.classList.add("attack-option", colorClass);
             highlightedCells.push(cell);
           }
-        } else if (envoy.type === "ranger") {
-          if (target.type !== "artillery") {
-            cell.classList.add("attack-option", colorClass);
-            highlightedCells.push(cell);
-          }
-        } else if (envoy.type === "infantry" && target.type !== "artillery") {
-          cell.classList.add("move-option", colorClass); // Infantry move+attack
+        }
+      }
+      // ===== RANGER =====
+      else if (envoy.type === "ranger") {
+        // Rangers can either move to empty spaces OR attack non-artillery (but not both)
+        if (!hasContents) {
+          // Empty space - can move here
+          cell.classList.add("move-option", colorClass);
+          highlightedCells.push(cell);
+        } else if (hasContents && target.contents === "envoy" && target.color !== envoy.color && target.type !== "artillery") {
+          // Enemy piece that's not artillery - can attack
+          cell.classList.add("attack-option", colorClass);
           highlightedCells.push(cell);
         }
       }
-
-      // Move targets (only for non-artillery)
-      if (!hasContents && envoy.type !== "artillery") {
-        cell.classList.add("move-option", colorClass);
-        highlightedCells.push(cell);
+      // ===== INFANTRY =====
+      else if (envoy.type === "infantry") {
+        if (!hasContents) {
+          // Empty space - can move here
+          cell.classList.add("move-option", colorClass);
+          highlightedCells.push(cell);
+        } else if (hasContents && target.contents === "envoy" && target.color !== envoy.color && target.type !== "artillery") {
+          // Enemy piece that's not artillery - move and attack
+          cell.classList.add("move-option", colorClass); // Still "move" option as infantry captures the space
+          highlightedCells.push(cell);
+        }
       }
     }
   }
@@ -675,6 +687,11 @@ function moveEnvoyTo(envoy, newRow, newCol) {
   
   // Update zone control visuals
   updateZoneControlVisuals();
+  
+  // Update selected envoy reference if it was moved
+  if (selectedEnvoy && selectedEnvoy.row === envoy.row && selectedEnvoy.col === envoy.col) {
+    selectedEnvoy = newCellData;
+  }
 }
 
 /**
@@ -749,7 +766,7 @@ function endTurn() {
   updateZoneControlVisuals();
   checkVictory();
   debugGameState(); // Add this line for debugging
-} // Added closing brace here - was missing
+}
 
 /**
  * Check if a player has won the game
@@ -792,109 +809,125 @@ function buildBoard() {
         const col = Number(cell.dataset.col);
         const zone = Number(cell.dataset.zone);
 
-        // PART 1: HANDLE SELECTING AND MOVING/ATTACKING WITH ENVOYS
-        if (selectedEnvoy) {
-          console.log("Selected envoy action:", selectedEnvoy); // Debug logging
+        console.log(`Clicked cell at ${row},${col}, zone ${zone}`);
 
-          // Get target cell data - check if it has contents
+        // If there's already a selected envoy, try to move or attack with it
+        if (selectedEnvoy) {
+          console.log("We have a selected envoy:", selectedEnvoy.name);
+          
+          // Check if this is a valid move/attack option (must be highlighted)
+          const isValidOption = cell.classList.contains('move-option') || 
+                              cell.classList.contains('attack-option');
+          
+          // Get target cell data
           const targetCell = cellData.find(c => c.row === row && c.col === col);
           const hasContents = targetCell && targetCell.contents;
           const isEnemy = hasContents && targetCell.color !== selectedEnvoy.color;
-
-          // Check if this is a valid move/attack option (must be highlighted)
-          const isValidOption = cell.classList.contains('move-option') ||
-            cell.classList.contains('attack-option');
-
+          
+          // If clicking the selected envoy again, deselect it
+          if (row === selectedEnvoy.row && col === selectedEnvoy.col) {
+            console.log("Deselecting envoy");
+            clearHighlights();
+            selectedEnvoy = null;
+            return;
+          }
+          
+          // If not a valid move option, check if clicking another friendly envoy
           if (!isValidOption) {
             console.log("Not a valid movement option");
+            
             // If clicking on another friendly envoy, select it instead
             if (hasContents && targetCell.contents === 'envoy' && targetCell.color === playerColor) {
+              console.log("Selecting different envoy");
               clearHighlights();
               selectedEnvoy = targetCell;
               highlightOptions(selectedEnvoy);
             } else {
               // Otherwise, just deselect the current envoy
+              console.log("Deselecting current envoy");
               clearHighlights();
               selectedEnvoy = null;
             }
             return;
           }
-
+          
           // Check if a friendly totem is in the zone (for artillery attacks)
           const totemInZone = cellData.some(c =>
             c.contents === "totem" &&
             c.zone === zone &&
             c.color === selectedEnvoy.color
           );
-
+          
           console.log("Processing move/attack with:", selectedEnvoy.type);
-
+          
           // Process by envoy type
+          // == INFANTRY ==
           if (selectedEnvoy.type === "infantry") {
             if (!hasContents) {
               // Empty cell - just move there
+              console.log("Infantry moving to empty space");
               moveEnvoyTo(selectedEnvoy, row, col);
               endTurn();
             } else if (isEnemy && targetCell.contents === "envoy") {
               if (targetCell.type !== "artillery") {
                 // Attack and capture position
+                console.log("Infantry attacking and capturing");
                 destroyAt(row, col);
                 moveEnvoyTo(selectedEnvoy, row, col);
                 endTurn();
               } else {
                 alert("Infantry cannot attack artillery.");
               }
-            } else {
-              console.log("Invalid infantry action");
             }
           }
-          // Ranger
+          // == RANGER ==
           else if (selectedEnvoy.type === "ranger") {
             if (!hasContents) {
               // Empty cell - move there
+              console.log("Ranger moving");
               moveEnvoyTo(selectedEnvoy, row, col);
               endTurn();
             } else if (isEnemy && targetCell.contents === "envoy") {
               if (targetCell.type !== "artillery") {
                 // Attack but don't move
+                console.log("Ranger attacking");
                 destroyAt(row, col);
                 endTurn();
               } else {
                 alert("Rangers cannot attack artillery.");
               }
-            } else {
-              console.log("Invalid ranger action");
             }
           }
-          // Artillery
+          // == ARTILLERY ==
           else if (selectedEnvoy.type === "artillery") {
             if (!totemInZone) {
               alert("Artillery cannot fire without a matching Totem in this zone.");
             } else if (isEnemy && targetCell.contents === "envoy" && targetCell.type === "artillery") {
+              console.log("Artillery attacking");
               destroyAt(row, col);
               endTurn();
             } else {
               alert("Artillery can only destroy other artillery.");
             }
           }
-
+          
           clearHighlights();
           selectedEnvoy = null;
           return;
         }
 
-        // PART 2: HANDLE SELECTING YOUR OWN ENVOY
-        const selected = cellData.find(c => c.row === row && c.col === col &&
-          c.contents === "envoy" && c.color === playerColor);
-        if (selected) {
-          console.log("Selecting envoy:", selected);
-          clearHighlights();
-          selectedEnvoy = selected;
-          highlightOptions(selected);
+        // If no envoy is selected yet, try to select one
+        const envoyAtLocation = cellData.find(c => c.row === row && c.col === col &&
+                                              c.contents === "envoy" && c.color === playerColor);
+        
+        if (envoyAtLocation) {
+          console.log("Selecting envoy:", envoyAtLocation.name);
+          selectedEnvoy = envoyAtLocation;
+          highlightOptions(selectedEnvoy);
           return;
         }
 
-        // PART 3: HANDLE TOTEM PLACEMENT AND ENVOY SUMMONING
+        // If not selecting or moving an envoy, handle totem placement or envoy summoning
         // Prevent placing on occupied squares
         if (cell.classList.contains('occupied')) return;
 
@@ -934,28 +967,31 @@ function buildBoard() {
       cell.clickHandler = handler;
 
       cell.addEventListener('mouseenter', () => {
-        const row = Number(cell.dataset.row);
-        const col = Number(cell.dataset.col);
-        const player = playerState.currentPlayer;
-        const playerColor = playerState[`player${player}Color`];
-      
-        const hovered = cellData.find(c => c.row === row && c.col === col);
-      
-        // Only show hover highlights if no unit is currently selected for movement
-        if (
-          !selectedEnvoy && // Only highlight on hover if no unit is selected
-          hovered &&
-          hovered.contents === "envoy" &&
-          hovered.color === playerColor
-        ) {
-          highlightOptions(hovered);
+        // Only show hover highlights if no unit is selected
+        if (!selectedEnvoy) {
+          const row = Number(cell.dataset.row);
+          const col = Number(cell.dataset.col);
+          const player = playerState.currentPlayer;
+          const playerColor = playerState[`player${player}Color`];
+        
+          const hovered = cellData.find(c => c.row === row && c.col === col);
+        
+          if (hovered && hovered.contents === "envoy" && hovered.color === playerColor) {
+            // Just lightly highlight this cell to show it's selectable
+            cell.classList.add(`highlight-${playerColor}`);
+          }
         }
       });
       
       cell.addEventListener('mouseleave', () => {
-        // Only clear highlights on mouseleave if no unit is selected for movement
+        // Only clear hover effects if no unit is selected
         if (!selectedEnvoy) {
-          clearHighlights();
+          const row = Number(cell.dataset.row);
+          const col = Number(cell.dataset.col);
+          const player = playerState.currentPlayer;
+          const playerColor = playerState[`player${player}Color`];
+          
+          cell.classList.remove(`highlight-${playerColor}`);
         }
       });
 
